@@ -1,7 +1,6 @@
 package com.example.hybridagent.di
 
 import android.content.Context
-import com.example.hybridagent.data.local.SettingsDataStore
 import com.example.hybridagent.data.remote.ApiService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -10,8 +9,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -49,24 +46,13 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRetrofit(
-        @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
         gson: Gson
     ): Retrofit {
-        // 从 DataStore 读取服务器地址，如果失败则使用默认值
-        val baseUrl = try {
-            runBlocking {
-                SettingsDataStore(context).serverUrl.first()
-            }
-        } catch (e: Exception) {
-            "http://localhost:3000/"
-        }
-
-        // 确保 URL 以 / 结尾
-        val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-
+        // 使用默认 URL，避免在依赖注入时阻塞主线程
+        // 实际的服务器 URL 将在运行时通过 Repository 层处理
         return Retrofit.Builder()
-            .baseUrl(normalizedUrl)
+            .baseUrl("http://localhost:3000/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
