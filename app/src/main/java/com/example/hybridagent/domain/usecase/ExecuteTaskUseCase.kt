@@ -10,6 +10,10 @@ class ExecuteTaskUseCase @Inject constructor(
     private val repository: TaskRepository
 ) {
     operator fun invoke(task: Task): Flow<Result<Task>> = flow {
-        emit(repository.executeTask(task))
+        try {
+            emit(repository.executeTask(task))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 }

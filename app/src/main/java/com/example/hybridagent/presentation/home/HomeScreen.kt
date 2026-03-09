@@ -23,7 +23,19 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var taskInput by remember { mutableStateOf("") }
-    
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 显示错误提示
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                duration = SnackbarDuration.Long
+            )
+            viewModel.clearError()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -37,7 +49,8 @@ fun HomeScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -143,15 +156,6 @@ fun HomeScreen(
                         task = task,
                         onClick = { onTaskClick(task) }
                     )
-                }
-            }
-            
-            // 错误提示
-            uiState.error?.let { error ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(error)
                 }
             }
         }

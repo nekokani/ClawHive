@@ -29,25 +29,38 @@ class HistoryViewModel @Inject constructor(
 
     fun loadHistory() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            
-            getHistoryUseCase(limit = 100, offset = 0).collect { result ->
-                result.onSuccess { tasks ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            allTasks = tasks,
-                            filteredTasks = filterTasks(tasks, it.searchQuery, it.selectedFilter),
-                            error = null
-                        )
+            try {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+
+                getHistoryUseCase(limit = 100, offset = 0).collect { result ->
+                    result.onSuccess { tasks ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                allTasks = tasks,
+                                filteredTasks = filterTasks(tasks, it.searchQuery, it.selectedFilter),
+                                error = null
+                            )
+                        }
+                    }.onFailure { error ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                allTasks = emptyList(),
+                                filteredTasks = emptyList(),
+                                error = "加载失败: ${error.message ?: "数据库访问错误"}"
+                            )
+                        }
                     }
-                }.onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error.message
-                        )
-                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        allTasks = emptyList(),
+                        filteredTasks = emptyList(),
+                        error = "加载失败: ${e.message ?: "未知错误"}"
+                    )
                 }
             }
         }
@@ -84,18 +97,30 @@ class HistoryViewModel @Inject constructor(
 
     fun deleteSelectedTasks() {
         viewModelScope.launch {
-            _uiState.value.selectedTaskIds.forEach { taskId ->
-                taskRepository.deleteTask(taskId)
+            try {
+                _uiState.value.selectedTaskIds.forEach { taskId ->
+                    taskRepository.deleteTask(taskId)
+                }
+                _uiState.update { it.copy(selectedTaskIds = emptySet()) }
+                loadHistory()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(error = "删除失败: ${e.message ?: "未知错误"}")
+                }
             }
-            _uiState.update { it.copy(selectedTaskIds = emptySet()) }
-            loadHistory()
         }
     }
 
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
-            taskRepository.deleteTask(taskId)
-            loadHistory()
+            try {
+                taskRepository.deleteTask(taskId)
+                loadHistory()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(error = "删除失败: ${e.message ?: "未知错误"}")
+                }
+            }
         }
     }
 
