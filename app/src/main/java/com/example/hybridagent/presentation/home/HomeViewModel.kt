@@ -55,7 +55,7 @@ class HomeViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                error = "执行失败: ${error.message ?: "后端服务未连接，请在设置中配置服务器地址"}"
+                                error = error.message ?: "OpenClaw 服务暂不可用"
                             )
                         }
                     }
@@ -64,7 +64,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "执行失败: ${e.message ?: "未知错误"}"
+                        error = "OpenClaw 服务暂不可用：${e.message ?: "未知错误"}"
                     )
                 }
             }

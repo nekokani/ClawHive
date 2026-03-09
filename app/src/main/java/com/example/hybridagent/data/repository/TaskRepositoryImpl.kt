@@ -20,38 +20,67 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun executeTask(task: Task): Result<Task> {
         return try {
+            // 先保存任务到数据库
             taskDao.insert(task.toEntity())
 
-            val response = apiService.executeTask(
-                TaskRequest(
-                    task = TaskInput(
-                        type = task.type.name.lowercase(),
-                        content = task.content
+            // 尝试调用 API
+            try {
+                val response = apiService.executeTask(
+                    TaskRequest(
+                        task = TaskInput(
+                            type = task.type.name.lowercase(),
+                            content = task.content
+                        )
                     )
                 )
-            )
 
-            if (response.isSuccessful && response.body() != null) {
-                val result = response.body()!!.result
-                val completedTask = task.copy(
-                    status = TaskStatus.COMPLETED,
-                    result = result.output,
-                    executor = ExecutorType.valueOf(result.executor.uppercase()),
-                    cost = result.cost,
-                    completedAt = System.currentTimeMillis()
-                )
+                if (response.isSuccessful && response.body() != null) {
+                    val result = response.body()!!.result
+                    val completedTask = task.copy(
+                        status = TaskStatus.COMPLETED,
+                        result = result.output,
+                        executor = ExecutorType.valueOf(result.executor.uppercase()),
+                        cost = result.cost,
+                        completedAt = System.currentTimeMillis()
+                    )
 
-                taskDao.update(completedTask.toEntity())
-                Result.success(completedTask)
-            } else {
-                val failedTask = task.copy(status = TaskStatus.FAILED)
-                taskDao.update(failedTask.toEntity())
-                Result.failure(Exception("API call failed: ${response.code()}"))
+                    taskDao.update(completedTask.toEntity())
+                    Result.success(completedTask)
+                } else {
+                    // API 调用失败
+                    try {
+                        val failedTask = task.copy(status = TaskStatus.FAILED)
+                        taskDao.update(failedTask.toEntity())
+                    } catch (dbError: Exception) {
+                        // 忽略数据库更新错误
+                    }
+                    Result.failure(Exception("OpenClaw 服务暂不可用 (HTTP ${response.code()})"))
+                }
+            } catch (networkError: Exception) {
+                // 网络错误（连接失败、超时等）
+                try {
+                    val failedTask = task.copy(status = TaskStatus.FAILED)
+                    taskDao.update(failedTask.toEntity())
+                } catch (dbError: Exception) {
+                    // 忽略数据库更新错误
+                }
+
+                // 根据异常类型返回友好的错误消息
+                val errorMessage = when {
+                    networkError is java.net.ConnectException ->
+                        "OpenClaw 服务暂不可用：无法连接到服务器"
+                    networkError is java.net.SocketTimeoutException ->
+                        "OpenClaw 服务暂不可用：连接超时"
+                    networkError is java.net.UnknownHostException ->
+                        "OpenClaw 服务暂不可用：无法解析服务器地址"
+                    else ->
+                        "OpenClaw 服务暂不可用：${networkError.message ?: "网络错误"}"
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
-            val failedTask = task.copy(status = TaskStatus.FAILED)
-            taskDao.update(failedTask.toEntity())
-            Result.failure(e)
+            // 数据库插入失败或其他未预期的错误
+            Result.failure(Exception("任务创建失败：${e.message ?: "未知错误"}"))
         }
     }
 
