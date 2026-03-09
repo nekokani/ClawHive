@@ -3,6 +3,7 @@ package com.example.hybridagent.di
 import android.content.Context
 import androidx.room.Room
 import com.example.hybridagent.data.local.AppDatabase
+import com.example.hybridagent.data.local.SettingsDataStore
 import com.example.hybridagent.data.local.TaskDao
 import dagger.Module
 import dagger.Provides
@@ -31,5 +32,13 @@ object DatabaseModule {
     @Singleton
     fun provideTaskDao(database: AppDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettingsDataStore(
+        @ApplicationContext context: Context
+    ): SettingsDataStore {
+        return SettingsDataStore(context)
     }
 }
