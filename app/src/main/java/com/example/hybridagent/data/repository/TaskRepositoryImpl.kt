@@ -36,10 +36,15 @@ class TaskRepositoryImpl @Inject constructor(
 
                 if (response.isSuccessful && response.body() != null) {
                     val result = response.body()!!.result
+                    val executorType = try {
+                        ExecutorType.valueOf(result.executor.uppercase())
+                    } catch (_: Exception) {
+                        ExecutorType.UNKNOWN
+                    }
                     val completedTask = task.copy(
                         status = TaskStatus.COMPLETED,
                         result = result.output,
-                        executor = ExecutorType.valueOf(result.executor.uppercase()),
+                        executor = executorType,
                         cost = result.cost,
                         completedAt = System.currentTimeMillis()
                     )

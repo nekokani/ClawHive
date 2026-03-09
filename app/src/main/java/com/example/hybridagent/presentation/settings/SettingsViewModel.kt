@@ -25,38 +25,56 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            settingsDataStore.anthropicApiKey.collect { key ->
-                _uiState.update { it.copy(anthropicApiKey = key) }
-            }
-        }
-        viewModelScope.launch {
-            settingsDataStore.openaiApiKey.collect { key ->
-                _uiState.update { it.copy(openaiApiKey = key) }
-            }
-        }
-        viewModelScope.launch {
-            settingsDataStore.serverUrl.collect { url ->
-                _uiState.update { it.copy(serverUrl = url) }
-            }
-        }
-        viewModelScope.launch {
-            settingsDataStore.executorPreference.collect { pref ->
-                _uiState.update {
-                    it.copy(executorPreference = ExecutorPreference.valueOf(pref))
+            try {
+                settingsDataStore.anthropicApiKey.collect { key ->
+                    _uiState.update { it.copy(anthropicApiKey = key) }
                 }
-            }
+            } catch (_: Exception) {}
         }
         viewModelScope.launch {
-            settingsDataStore.costBudget.collect { budget ->
-                _uiState.update { it.copy(costBudget = budget) }
-            }
-        }
-        viewModelScope.launch {
-            settingsDataStore.themeMode.collect { theme ->
-                _uiState.update {
-                    it.copy(themeMode = ThemeMode.valueOf(theme))
+            try {
+                settingsDataStore.openaiApiKey.collect { key ->
+                    _uiState.update { it.copy(openaiApiKey = key) }
                 }
-            }
+            } catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try {
+                settingsDataStore.serverUrl.collect { url ->
+                    _uiState.update { it.copy(serverUrl = url) }
+                }
+            } catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try {
+                settingsDataStore.executorPreference.collect { pref ->
+                    val preference = try {
+                        ExecutorPreference.valueOf(pref)
+                    } catch (_: Exception) {
+                        ExecutorPreference.AUTO
+                    }
+                    _uiState.update { it.copy(executorPreference = preference) }
+                }
+            } catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try {
+                settingsDataStore.costBudget.collect { budget ->
+                    _uiState.update { it.copy(costBudget = budget) }
+                }
+            } catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try {
+                settingsDataStore.themeMode.collect { theme ->
+                    val mode = try {
+                        ThemeMode.valueOf(theme)
+                    } catch (_: Exception) {
+                        ThemeMode.SYSTEM
+                    }
+                    _uiState.update { it.copy(themeMode = mode) }
+                }
+            } catch (_: Exception) {}
         }
     }
 
