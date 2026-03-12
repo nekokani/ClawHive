@@ -39,6 +39,13 @@ fun SettingsScreen(
         }
     }
 
+    LaunchedEffect(uiState.testResult) {
+        uiState.testResult?.let {
+            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Long)
+            viewModel.clearTestResult()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -101,6 +108,18 @@ fun SettingsScreen(
                     leadingIcon = { Icon(Icons.Default.SmartToy, "Model") },
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { viewModel.testAnthropicConnection() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isTestingAnthropic && uiState.anthropicApiKey.isNotBlank()
+                ) {
+                    if (uiState.isTestingAnthropic) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (uiState.isTestingAnthropic) "测试中..." else "测试连接")
+                }
             }
 
             // OpenAI 配置
@@ -130,6 +149,18 @@ fun SettingsScreen(
                     leadingIcon = { Icon(Icons.Default.SmartToy, "Model") },
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { viewModel.testOpenAiConnection() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isTestingOpenAi && uiState.openaiApiKey.isNotBlank()
+                ) {
+                    if (uiState.isTestingOpenAi) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (uiState.isTestingOpenAi) "测试中..." else "测试连接")
+                }
             }
 
             // 主题设置

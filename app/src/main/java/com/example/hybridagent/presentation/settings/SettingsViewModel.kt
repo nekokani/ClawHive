@@ -1,8 +1,11 @@
 package com.example.hybridagent.presentation.settings
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hybridagent.data.local.SettingsDataStore
+import com.example.hybridagent.data.model.ChatMessage
+import com.example.hybridagent.data.repository.LlmRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsDataStore: SettingsDataStore
+    private val settingsDataStore: SettingsDataStore,
+    private val llmRepository: LlmRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -63,7 +67,7 @@ class SettingsViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                // 加载失败，使用默认值
+                Log.e("ClawHive", "Failed to load settings", e)
             }
         }
     }
@@ -105,6 +109,58 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(themeMode = theme, hasUnsavedChanges = true) }
     }
 
+    fun testAnthropicConnection() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isTestingAnthropic = true, testResult = null) }
+                val s = _uiState.value
+                if (s.anthropicApiKey.isBlank()) {
+                    _uiState.update { it.copy(isTestingAnthropic = false, testResult = "请先填写 Anthropic API Key") }
+                    return@launch
+                }
+                val result = llmRepository.chatWithClaude(
+                    apiKey = s.anthropicApiKey,
+                    messages = listOf(ChatMessage(role = "user", content = "Hi")),
+                    baseUrl = s.anthropicBaseUrl,
+                    model = s.anthropicModel
+                )
+                result.onSuccess {
+                    _uiState.update { it.copy(isTestingAnthropic = false, testResult = "✅ Anthropic 连接成功") }
+                }.onFailure { e ->
+                    _uiState.update { it.copy(isTestingAnthropic = false, testResult = "❌ Anthropic 连接失败: ${e.message}") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isTestingAnthropic = false, testResult = "❌ 测试失败: ${e.message}") }
+            }
+        }
+    }
+
+    fun testOpenAiConnection() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isTestingOpenAi = true, testResult = null) }
+                val s = _uiState.value
+                if (s.openaiApiKey.isBlank()) {
+                    _uiState.update { it.copy(isTestingOpenAi = false, testResult = "请先填写 OpenAI API Key") }
+                    return@launch
+                }
+                val result = llmRepository.chatWithOpenAi(
+                    apiKey = s.openaiApiKey,
+                    messages = listOf(ChatMessage(role = "user", content = "Hi")),
+                    baseUrl = s.openaiBaseUrl,
+                    model = s.openaiModel
+                )
+                result.onSuccess {
+                    _uiState.update { it.copy(isTestingOpenAi = false, testResult = "✅ OpenAI 连接成功") }
+                }.onFailure { e ->
+                    _uiState.update { it.copy(isTestingOpenAi = false, testResult = "❌ OpenAI 连接失败: ${e.message}") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isTestingOpenAi = false, testResult = "❌ 测试失败: ${e.message}") }
+            }
+        }
+    }
+
     fun saveSettings() {
         viewModelScope.launch {
             try {
@@ -123,6 +179,7 @@ class SettingsViewModel @Inject constructor(
                 kotlinx.coroutines.delay(2000)
                 _uiState.update { it.copy(saveSuccess = false) }
             } catch (e: Exception) {
+                Log.e("ClawHive", "Failed to save settings", e)
                 _uiState.update { it.copy(isSaving = false, saveError = "保存失败: ${e.message}") }
             }
         }
@@ -142,6 +199,10 @@ class SettingsViewModel @Inject constructor(
     fun clearError() {
         _uiState.update { it.copy(saveError = null) }
     }
+
+    fun clearTestResult() {
+        _uiState.update { it.copy(testResult = null) }
+    }
 }
 
 data class SettingsUiState(
@@ -158,7 +219,10 @@ data class SettingsUiState(
     val hasUnsavedChanges: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-    val saveError: String? = null
+    val saveError: String? = null,
+    val isTestingAnthropic: Boolean = false,
+    val isTestingOpenAi: Boolean = false,
+    val testResult: String? = null
 )
 
 enum class ApiProvider { ANTHROPIC, OPENAI }
