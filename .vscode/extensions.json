@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "vscjava.vscode-java-pack",
+    "mathiasfrohlich.kotlin",
+    "adelphes.android-dev-ext",
+    "vscjava.vscode-gradle"
+  ]
+}

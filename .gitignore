@@ -86,3 +86,22 @@ commandlinetools-linux-11076708_latest.zip
 
 # Build logs
 build.log
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/ANDROID_DEBUG.md
+
+# macOS
+.DS_Store
+
+# Claude
+.claude/
+
+# Debug logs
+crash_log_*.txt
+app_log.txt
+full_log.txt

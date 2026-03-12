@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Debug APK",
+      "type": "shell",
+      "command": "./gradlew assembleDebug",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Debug APK",
+      "type": "shell",
+      "command": "./gradlew installDebug",
+      "dependsOn": "Build Debug APK",
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean Build",
+      "type": "shell",
+      "command": "./gradlew clean",
+      "problemMatcher": []
+    },
+    {
+      "label": "View Logcat",
+      "type": "shell",
+      "command": "adb logcat -c && adb logcat | grep -E 'ClawHive|AndroidRuntime'",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Clear App Data",
+      "type": "shell",
+      "command": "adb shell pm clear com.example.hybridagent",
+      "problemMatcher": []
+    }
+  ]
+}
