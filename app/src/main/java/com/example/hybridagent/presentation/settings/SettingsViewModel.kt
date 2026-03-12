@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,37 +26,45 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            try { settingsDataStore.anthropicApiKey.collect { _uiState.update { s -> s.copy(anthropicApiKey = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.anthropicBaseUrl.collect { _uiState.update { s -> s.copy(anthropicBaseUrl = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.anthropicModel.collect { _uiState.update { s -> s.copy(anthropicModel = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.openaiApiKey.collect { _uiState.update { s -> s.copy(openaiApiKey = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.openaiBaseUrl.collect { _uiState.update { s -> s.copy(openaiBaseUrl = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.openaiModel.collect { _uiState.update { s -> s.copy(openaiModel = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.executorPreference.collect { pref ->
-                val preference = try { ExecutorPreference.valueOf(pref) } catch (_: Exception) { ExecutorPreference.AUTO }
-                _uiState.update { s -> s.copy(executorPreference = preference) }
-            }} catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.costBudget.collect { _uiState.update { s -> s.copy(costBudget = it) } } } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { settingsDataStore.themeMode.collect { theme ->
-                val mode = try { ThemeMode.valueOf(theme) } catch (_: Exception) { ThemeMode.SYSTEM }
-                _uiState.update { s -> s.copy(themeMode = mode) }
-            }} catch (_: Exception) {}
+            try {
+                val anthropicKey = settingsDataStore.anthropicApiKey.first()
+                val anthropicBaseUrl = settingsDataStore.anthropicBaseUrl.first()
+                val anthropicModel = settingsDataStore.anthropicModel.first()
+                val openaiKey = settingsDataStore.openaiApiKey.first()
+                val openaiBaseUrl = settingsDataStore.openaiBaseUrl.first()
+                val openaiModel = settingsDataStore.openaiModel.first()
+                val executorPref = settingsDataStore.executorPreference.first()
+                val costBudget = settingsDataStore.costBudget.first()
+                val themeMode = settingsDataStore.themeMode.first()
+
+                val preference = try {
+                    ExecutorPreference.valueOf(executorPref)
+                } catch (_: Exception) {
+                    ExecutorPreference.AUTO
+                }
+
+                val theme = try {
+                    ThemeMode.valueOf(themeMode)
+                } catch (_: Exception) {
+                    ThemeMode.SYSTEM
+                }
+
+                _uiState.update {
+                    it.copy(
+                        anthropicApiKey = anthropicKey,
+                        anthropicBaseUrl = anthropicBaseUrl,
+                        anthropicModel = anthropicModel,
+                        openaiApiKey = openaiKey,
+                        openaiBaseUrl = openaiBaseUrl,
+                        openaiModel = openaiModel,
+                        executorPreference = preference,
+                        costBudget = costBudget,
+                        themeMode = theme
+                    )
+                }
+            } catch (e: Exception) {
+                // 加载失败，使用默认值
+            }
         }
     }
 

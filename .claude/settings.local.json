@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add app/src/main/java/com/example/hybridagent/data/local/SettingsDataStore.kt app/src/main/java/com/example/hybridagent/di/DatabaseModule.kt app/src/main/java/com/example/hybridagent/presentation/settings/SettingsScreen.kt app/src/main/java/com/example/hybridagent/presentation/settings/SettingsViewModel.kt)",
+      "Bash(git commit:*)",
+      "Bash(git add app/src/main/java/com/example/hybridagent/di/NetworkModule.kt)",
+      "Bash(git push origin main)",
+      "Bash(/tmp/debug_instructions.md:*)",
+      "Read(//tmp/**)",
+      "Bash(chmod +x /Users/johnn/Desktop/ClawHive/capture_crash_log.sh)",
+      "Bash(git pull origin main)",
+      "Bash(git stash push -m \"Local debugging improvements\")",
+      "Bash(git stash drop)"
+    ]
+  }
+}
