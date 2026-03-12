@@ -2,97 +2,66 @@ package com.example.hybridagent.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hybridagent.domain.model.Task
-import com.example.hybridagent.domain.model.TaskStatus
-import com.example.hybridagent.domain.model.TaskType
-import com.example.hybridagent.domain.model.ExecutorType
-import com.example.hybridagent.domain.usecase.ExecuteTaskUseCase
-import com.example.hybridagent.domain.usecase.GetHistoryUseCase
+import com.example.hybridagent.data.local.SettingsDataStore
+import com.example.hybridagent.data.model.ChatMessage
+import com.example.hybridagent.data.repository.LlmRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val executeTaskUseCase: ExecuteTaskUseCase,
-    private val getHistoryUseCase: GetHistoryUseCase
+    private val llmRepository: LlmRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    init {
-        loadHistory()
-    }
+    fun sendMessage(userInput: String) {
+        if (userInput.isBlank()) return
 
-    fun executeTask(content: String, type: TaskType) {
+        val userMessage = ChatMessage(role = "user", content = userInput)
+        val updatedMessages = _uiState.value.messages + userMessage
+
+        _uiState.update { it.copy(messages = updatedMessages, isLoading = true, error = null) }
+
         viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(isLoading = true, error = null) }
+            val anthropicKey = settingsDataStore.anthropicApiKey.first()
+            val anthropicBaseUrl = settingsDataStore.anthropicBaseUrl.first()
+            val anthropicModel = settingsDataStore.anthropicModel.first()
+            val openaiKey = settingsDataStore.openaiApiKey.first()
+            val openaiBaseUrl = settingsDataStore.openaiBaseUrl.first()
+            val openaiModel = settingsDataStore.openaiModel.first()
 
-                val task = Task(
-                    content = content,
-                    type = type,
-                    status = TaskStatus.PENDING,
-                    executor = ExecutorType.UNKNOWN
+            val result = when {
+                anthropicKey.isNotBlank() -> llmRepository.chatWithClaude(
+                    apiKey = anthropicKey,
+                    messages = updatedMessages,
+                    baseUrl = anthropicBaseUrl,
+                    model = anthropicModel
                 )
-
-                executeTaskUseCase(task).collect { result ->
-                    result.onSuccess { completedTask ->
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                currentTask = completedTask,
-                                error = null
-                            )
-                        }
-                        loadHistory()
-                    }.onFailure { error ->
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = error.message ?: "OpenClaw 服务暂不可用"
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "OpenClaw 服务暂不可用：${e.message ?: "未知错误"}"
-                    )
-                }
+                openaiKey.isNotBlank() -> llmRepository.chatWithOpenAi(
+                    apiKey = openaiKey,
+                    messages = updatedMessages,
+                    baseUrl = openaiBaseUrl,
+                    model = openaiModel
+                )
+                else -> Result.failure(Exception("请先在设置中填写 API Key（Anthropic 或 OpenAI）"))
             }
-        }
-    }
 
-    fun loadHistory() {
-        viewModelScope.launch {
-            try {
-                getHistoryUseCase(limit = 10, offset = 0).collect { result ->
-                    result.onSuccess { tasks ->
-                        _uiState.update { it.copy(recentTasks = tasks, error = null) }
-                    }.onFailure { error ->
-                        _uiState.update {
-                            it.copy(
-                                recentTasks = emptyList(),
-                                error = null  // 不显示历史加载错误，避免干扰用户
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
+            result.onSuccess { reply ->
+                val assistantMessage = ChatMessage(role = "assistant", content = reply)
                 _uiState.update {
-                    it.copy(
-                        recentTasks = emptyList(),
-                        error = null
-                    )
+                    it.copy(messages = it.messages + assistantMessage, isLoading = false)
                 }
+            }.onFailure { error ->
+                _uiState.update { it.copy(isLoading = false, error = error.message ?: "请求失败") }
             }
         }
     }
@@ -100,11 +69,14 @@ class HomeViewModel @Inject constructor(
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
+
+    fun clearMessages() {
+        _uiState.update { it.copy(messages = emptyList(), error = null) }
+    }
 }
 
 data class HomeUiState(
+    val messages: List<ChatMessage> = emptyList(),
     val isLoading: Boolean = false,
-    val currentTask: Task? = null,
-    val recentTasks: List<Task> = emptyList(),
     val error: String? = null
 )

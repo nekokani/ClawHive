@@ -16,76 +16,42 @@ class SettingsDataStore(private val context: Context) {
 
     companion object {
         private val ANTHROPIC_API_KEY = stringPreferencesKey("anthropic_api_key")
+        private val ANTHROPIC_BASE_URL = stringPreferencesKey("anthropic_base_url")
+        private val ANTHROPIC_MODEL = stringPreferencesKey("anthropic_model")
         private val OPENAI_API_KEY = stringPreferencesKey("openai_api_key")
+        private val OPENAI_BASE_URL = stringPreferencesKey("openai_base_url")
+        private val OPENAI_MODEL = stringPreferencesKey("openai_model")
         private val SERVER_URL = stringPreferencesKey("server_url")
         private val EXECUTOR_PREFERENCE = stringPreferencesKey("executor_preference")
         private val COST_BUDGET = doublePreferencesKey("cost_budget")
         private val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
-    val anthropicApiKey: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[ANTHROPIC_API_KEY] ?: ""
-    }
+    val anthropicApiKey: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_API_KEY] ?: "" }
+    val anthropicBaseUrl: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_BASE_URL] ?: "https://api.anthropic.com/" }
+    val anthropicModel: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_MODEL] ?: "claude-haiku-4-5-20251001" }
 
-    val openaiApiKey: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[OPENAI_API_KEY] ?: ""
-    }
+    val openaiApiKey: Flow<String> = context.dataStore.data.map { it[OPENAI_API_KEY] ?: "" }
+    val openaiBaseUrl: Flow<String> = context.dataStore.data.map { it[OPENAI_BASE_URL] ?: "https://api.openai.com/" }
+    val openaiModel: Flow<String> = context.dataStore.data.map { it[OPENAI_MODEL] ?: "gpt-4o-mini" }
 
-    val serverUrl: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[SERVER_URL] ?: "http://localhost:3000"
-    }
+    val serverUrl: Flow<String> = context.dataStore.data.map { it[SERVER_URL] ?: "http://localhost:3000" }
+    val executorPreference: Flow<String> = context.dataStore.data.map { it[EXECUTOR_PREFERENCE] ?: "AUTO" }
+    val costBudget: Flow<Double> = context.dataStore.data.map { it[COST_BUDGET] ?: 1.0 }
+    val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "SYSTEM" }
 
-    val executorPreference: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[EXECUTOR_PREFERENCE] ?: "AUTO"
-    }
+    suspend fun saveAnthropicApiKey(key: String) = context.dataStore.edit { it[ANTHROPIC_API_KEY] = key }
+    suspend fun saveAnthropicBaseUrl(url: String) = context.dataStore.edit { it[ANTHROPIC_BASE_URL] = url }
+    suspend fun saveAnthropicModel(model: String) = context.dataStore.edit { it[ANTHROPIC_MODEL] = model }
 
-    val costBudget: Flow<Double> = context.dataStore.data.map { preferences ->
-        preferences[COST_BUDGET] ?: 1.0
-    }
+    suspend fun saveOpenaiApiKey(key: String) = context.dataStore.edit { it[OPENAI_API_KEY] = key }
+    suspend fun saveOpenaiBaseUrl(url: String) = context.dataStore.edit { it[OPENAI_BASE_URL] = url }
+    suspend fun saveOpenaiModel(model: String) = context.dataStore.edit { it[OPENAI_MODEL] = model }
 
-    val themeMode: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[THEME_MODE] ?: "SYSTEM"
-    }
+    suspend fun saveServerUrl(url: String) = context.dataStore.edit { it[SERVER_URL] = url }
+    suspend fun saveExecutorPreference(preference: String) = context.dataStore.edit { it[EXECUTOR_PREFERENCE] = preference }
+    suspend fun saveCostBudget(budget: Double) = context.dataStore.edit { it[COST_BUDGET] = budget }
+    suspend fun saveThemeMode(theme: String) = context.dataStore.edit { it[THEME_MODE] = theme }
 
-    suspend fun saveAnthropicApiKey(key: String) {
-        context.dataStore.edit { preferences ->
-            preferences[ANTHROPIC_API_KEY] = key
-        }
-    }
-
-    suspend fun saveOpenaiApiKey(key: String) {
-        context.dataStore.edit { preferences ->
-            preferences[OPENAI_API_KEY] = key
-        }
-    }
-
-    suspend fun saveServerUrl(url: String) {
-        context.dataStore.edit { preferences ->
-            preferences[SERVER_URL] = url
-        }
-    }
-
-    suspend fun saveExecutorPreference(preference: String) {
-        context.dataStore.edit { preferences ->
-            preferences[EXECUTOR_PREFERENCE] = preference
-        }
-    }
-
-    suspend fun saveCostBudget(budget: Double) {
-        context.dataStore.edit { preferences ->
-            preferences[COST_BUDGET] = budget
-        }
-    }
-
-    suspend fun saveThemeMode(theme: String) {
-        context.dataStore.edit { preferences ->
-            preferences[THEME_MODE] = theme
-        }
-    }
-
-    suspend fun clearAll() {
-        context.dataStore.edit { preferences ->
-            preferences.clear()
-        }
-    }
+    suspend fun clearAll() = context.dataStore.edit { it.clear() }
 }

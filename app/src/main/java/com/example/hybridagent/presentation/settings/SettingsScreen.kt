@@ -26,23 +26,15 @@ fun SettingsScreen(
     var showClearDataDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 显示保存成功提示
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
-            snackbarHostState.showSnackbar(
-                message = "设置已保存",
-                duration = SnackbarDuration.Short
-            )
+            snackbarHostState.showSnackbar(message = "设置已保存", duration = SnackbarDuration.Short)
         }
     }
 
-    // 显示错误提示
     LaunchedEffect(uiState.saveError) {
-        uiState.saveError?.let { error ->
-            snackbarHostState.showSnackbar(
-                message = error,
-                duration = SnackbarDuration.Long
-            )
+        uiState.saveError?.let {
+            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Long)
             viewModel.clearError()
         }
     }
@@ -63,10 +55,7 @@ fun SettingsScreen(
                             enabled = !uiState.isSaving
                         ) {
                             if (uiState.isSaving) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
                             Text("保存")
@@ -85,100 +74,61 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // API 配置
-            SettingsSection(title = "API 配置") {
+            // Anthropic 配置
+            SettingsSection(title = "Anthropic (Claude)") {
                 ApiKeyField(
-                    label = "Anthropic API Key",
+                    label = "API Key",
                     value = uiState.anthropicApiKey,
                     onValueChange = { viewModel.updateApiKey(ApiProvider.ANTHROPIC, it) }
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = uiState.anthropicBaseUrl,
+                    onValueChange = viewModel::updateAnthropicBaseUrl,
+                    label = { Text("Base URL") },
+                    placeholder = { Text("https://api.anthropic.com/") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Cloud, "Base URL") },
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = uiState.anthropicModel,
+                    onValueChange = viewModel::updateAnthropicModel,
+                    label = { Text("Model ID") },
+                    placeholder = { Text("claude-haiku-4-5-20251001") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.SmartToy, "Model") },
+                    singleLine = true
+                )
+            }
 
+            // OpenAI 配置
+            SettingsSection(title = "OpenAI (ChatGPT)") {
                 ApiKeyField(
-                    label = "OpenAI API Key",
+                    label = "API Key",
                     value = uiState.openaiApiKey,
                     onValueChange = { viewModel.updateApiKey(ApiProvider.OPENAI, it) }
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 OutlinedTextField(
-                    value = uiState.serverUrl,
-                    onValueChange = viewModel::updateServerUrl,
-                    label = { Text("服务器地址") },
+                    value = uiState.openaiBaseUrl,
+                    onValueChange = viewModel::updateOpenaiBaseUrl,
+                    label = { Text("Base URL") },
+                    placeholder = { Text("https://api.openai.com/") },
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = {
-                        Icon(Icons.Default.Cloud, "服务器")
-                    },
+                    leadingIcon = { Icon(Icons.Default.Cloud, "Base URL") },
                     singleLine = true
                 )
-            }
-
-            // 执行器偏好
-            SettingsSection(title = "执行器偏好") {
-                ExecutorPreference.values().forEach { preference ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.executorPreference == preference,
-                            onClick = { viewModel.updateExecutorPreference(preference) }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                when (preference) {
-                                    ExecutorPreference.AUTO -> "自动选择"
-                                    ExecutorPreference.LOCAL_FIRST -> "本地优先"
-                                    ExecutorPreference.CLOUD_FIRST -> "云端优先"
-                                },
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                when (preference) {
-                                    ExecutorPreference.AUTO -> "根据任务复杂度自动选择"
-                                    ExecutorPreference.LOCAL_FIRST -> "优先使用本地 OpenClaw"
-                                    ExecutorPreference.CLOUD_FIRST -> "优先使用云端 AI"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 成本预算
-            SettingsSection(title = "成本预算") {
-                var budgetText by remember(uiState.costBudget) {
-                    mutableStateOf(uiState.costBudget.toString())
-                }
-
+                Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
-                    value = budgetText,
-                    onValueChange = { newValue ->
-                        budgetText = newValue
-                        newValue.toDoubleOrNull()?.let { budget ->
-                            viewModel.updateCostBudget(budget)
-                        }
-                    },
-                    label = { Text("单次任务最大成本 (USD)") },
+                    value = uiState.openaiModel,
+                    onValueChange = viewModel::updateOpenaiModel,
+                    label = { Text("Model ID") },
+                    placeholder = { Text("gpt-4o-mini") },
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = {
-                        Icon(Icons.Default.AttachMoney, "成本")
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    leadingIcon = { Icon(Icons.Default.SmartToy, "Model") },
                     singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    "超过此预算的任务将被拒绝执行",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -213,14 +163,6 @@ fun SettingsScreen(
                     title = "应用版本",
                     subtitle = uiState.appVersion
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                SettingsItem(
-                    icon = Icons.Default.Code,
-                    title = "开源许可",
-                    subtitle = "查看开源许可信息"
-                )
             }
 
             // 数据管理
@@ -245,24 +187,15 @@ fun SettingsScreen(
             onDismissRequest = { showClearDataDialog = false },
             icon = { Icon(Icons.Default.Warning, "警告") },
             title = { Text("确认清除数据") },
-            text = { Text("此操作将清除所有历史记录和设置，且无法恢复。确定要继续吗？") },
+            text = { Text("此操作将清除所有设置，且无法恢复。确定要继续吗？") },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        viewModel.clearAllData()
-                        showClearDataDialog = false
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("清除")
-                }
+                    onClick = { viewModel.clearAllData(); showClearDataDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("清除") }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDataDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showClearDataDialog = false }) { Text("取消") }
             }
         )
     }
@@ -274,18 +207,10 @@ fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(12.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 content()
             }
         }
@@ -299,17 +224,12 @@ fun ApiKeyField(
     onValueChange: (String) -> Unit
 ) {
     var isVisible by remember { mutableStateOf(false) }
-
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
-        visualTransformation = if (isVisible) {
-            VisualTransformation.None
-        } else {
-            PasswordVisualTransformation()
-        },
+        visualTransformation = if (isVisible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = { isVisible = !isVisible }) {
                 Icon(
@@ -318,9 +238,7 @@ fun ApiKeyField(
                 )
             }
         },
-        leadingIcon = {
-            Icon(Icons.Default.Key, "API Key")
-        },
+        leadingIcon = { Icon(Icons.Default.Key, "API Key") },
         singleLine = true
     )
 }
@@ -331,26 +249,12 @@ fun SettingsItem(
     title: String,
     subtitle: String
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            icon,
-            contentDescription = title,
-            tint = MaterialTheme.colorScheme.primary
-        )
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = title, tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(
-                title,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

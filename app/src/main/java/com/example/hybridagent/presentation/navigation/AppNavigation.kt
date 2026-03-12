@@ -41,9 +41,6 @@ fun AppNavigation(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
-                },
-                onTaskClick = { task ->
-                    navController.navigate(Screen.TaskDetail.createRoute(task.id))
                 }
             )
         }

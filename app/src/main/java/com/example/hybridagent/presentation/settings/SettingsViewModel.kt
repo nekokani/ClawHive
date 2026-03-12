@@ -25,56 +25,37 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            try {
-                settingsDataStore.anthropicApiKey.collect { key ->
-                    _uiState.update { it.copy(anthropicApiKey = key) }
-                }
-            } catch (_: Exception) {}
+            try { settingsDataStore.anthropicApiKey.collect { _uiState.update { s -> s.copy(anthropicApiKey = it) } } } catch (_: Exception) {}
         }
         viewModelScope.launch {
-            try {
-                settingsDataStore.openaiApiKey.collect { key ->
-                    _uiState.update { it.copy(openaiApiKey = key) }
-                }
-            } catch (_: Exception) {}
+            try { settingsDataStore.anthropicBaseUrl.collect { _uiState.update { s -> s.copy(anthropicBaseUrl = it) } } } catch (_: Exception) {}
         }
         viewModelScope.launch {
-            try {
-                settingsDataStore.serverUrl.collect { url ->
-                    _uiState.update { it.copy(serverUrl = url) }
-                }
-            } catch (_: Exception) {}
+            try { settingsDataStore.anthropicModel.collect { _uiState.update { s -> s.copy(anthropicModel = it) } } } catch (_: Exception) {}
         }
         viewModelScope.launch {
-            try {
-                settingsDataStore.executorPreference.collect { pref ->
-                    val preference = try {
-                        ExecutorPreference.valueOf(pref)
-                    } catch (_: Exception) {
-                        ExecutorPreference.AUTO
-                    }
-                    _uiState.update { it.copy(executorPreference = preference) }
-                }
-            } catch (_: Exception) {}
+            try { settingsDataStore.openaiApiKey.collect { _uiState.update { s -> s.copy(openaiApiKey = it) } } } catch (_: Exception) {}
         }
         viewModelScope.launch {
-            try {
-                settingsDataStore.costBudget.collect { budget ->
-                    _uiState.update { it.copy(costBudget = budget) }
-                }
-            } catch (_: Exception) {}
+            try { settingsDataStore.openaiBaseUrl.collect { _uiState.update { s -> s.copy(openaiBaseUrl = it) } } } catch (_: Exception) {}
         }
         viewModelScope.launch {
-            try {
-                settingsDataStore.themeMode.collect { theme ->
-                    val mode = try {
-                        ThemeMode.valueOf(theme)
-                    } catch (_: Exception) {
-                        ThemeMode.SYSTEM
-                    }
-                    _uiState.update { it.copy(themeMode = mode) }
-                }
-            } catch (_: Exception) {}
+            try { settingsDataStore.openaiModel.collect { _uiState.update { s -> s.copy(openaiModel = it) } } } catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try { settingsDataStore.executorPreference.collect { pref ->
+                val preference = try { ExecutorPreference.valueOf(pref) } catch (_: Exception) { ExecutorPreference.AUTO }
+                _uiState.update { s -> s.copy(executorPreference = preference) }
+            }} catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try { settingsDataStore.costBudget.collect { _uiState.update { s -> s.copy(costBudget = it) } } } catch (_: Exception) {}
+        }
+        viewModelScope.launch {
+            try { settingsDataStore.themeMode.collect { theme ->
+                val mode = try { ThemeMode.valueOf(theme) } catch (_: Exception) { ThemeMode.SYSTEM }
+                _uiState.update { s -> s.copy(themeMode = mode) }
+            }} catch (_: Exception) {}
         }
     }
 
@@ -87,8 +68,20 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateServerUrl(url: String) {
-        _uiState.update { it.copy(serverUrl = url, hasUnsavedChanges = true) }
+    fun updateAnthropicBaseUrl(url: String) {
+        _uiState.update { it.copy(anthropicBaseUrl = url, hasUnsavedChanges = true) }
+    }
+
+    fun updateAnthropicModel(model: String) {
+        _uiState.update { it.copy(anthropicModel = model, hasUnsavedChanges = true) }
+    }
+
+    fun updateOpenaiBaseUrl(url: String) {
+        _uiState.update { it.copy(openaiBaseUrl = url, hasUnsavedChanges = true) }
+    }
+
+    fun updateOpenaiModel(model: String) {
+        _uiState.update { it.copy(openaiModel = model, hasUnsavedChanges = true) }
     }
 
     fun updateExecutorPreference(preference: ExecutorPreference) {
@@ -107,33 +100,21 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isSaving = true, saveError = null) }
-
-                val state = _uiState.value
-                settingsDataStore.saveAnthropicApiKey(state.anthropicApiKey)
-                settingsDataStore.saveOpenaiApiKey(state.openaiApiKey)
-                settingsDataStore.saveServerUrl(state.serverUrl)
-                settingsDataStore.saveExecutorPreference(state.executorPreference.name)
-                settingsDataStore.saveCostBudget(state.costBudget)
-                settingsDataStore.saveThemeMode(state.themeMode.name)
-
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        hasUnsavedChanges = false,
-                        saveSuccess = true
-                    )
-                }
-
-                // 清除成功提示
+                val s = _uiState.value
+                settingsDataStore.saveAnthropicApiKey(s.anthropicApiKey)
+                settingsDataStore.saveAnthropicBaseUrl(s.anthropicBaseUrl)
+                settingsDataStore.saveAnthropicModel(s.anthropicModel)
+                settingsDataStore.saveOpenaiApiKey(s.openaiApiKey)
+                settingsDataStore.saveOpenaiBaseUrl(s.openaiBaseUrl)
+                settingsDataStore.saveOpenaiModel(s.openaiModel)
+                settingsDataStore.saveExecutorPreference(s.executorPreference.name)
+                settingsDataStore.saveCostBudget(s.costBudget)
+                settingsDataStore.saveThemeMode(s.themeMode.name)
+                _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, saveSuccess = true) }
                 kotlinx.coroutines.delay(2000)
                 _uiState.update { it.copy(saveSuccess = false) }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        saveError = "保存失败: ${e.message}"
-                    )
-                }
+                _uiState.update { it.copy(isSaving = false, saveError = "保存失败: ${e.message}") }
             }
         }
     }
@@ -144,9 +125,7 @@ class SettingsViewModel @Inject constructor(
                 settingsDataStore.clearAll()
                 _uiState.update { SettingsUiState() }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(saveError = "清除数据失败: ${e.message}")
-                }
+                _uiState.update { it.copy(saveError = "清除数据失败: ${e.message}") }
             }
         }
     }
@@ -158,8 +137,11 @@ class SettingsViewModel @Inject constructor(
 
 data class SettingsUiState(
     val anthropicApiKey: String = "",
+    val anthropicBaseUrl: String = "https://api.anthropic.com/",
+    val anthropicModel: String = "claude-haiku-4-5-20251001",
     val openaiApiKey: String = "",
-    val serverUrl: String = "http://localhost:3000",
+    val openaiBaseUrl: String = "https://api.openai.com/",
+    val openaiModel: String = "gpt-4o-mini",
     val executorPreference: ExecutorPreference = ExecutorPreference.AUTO,
     val costBudget: Double = 1.0,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -170,19 +152,6 @@ data class SettingsUiState(
     val saveError: String? = null
 )
 
-enum class ApiProvider {
-    ANTHROPIC,
-    OPENAI
-}
-
-enum class ExecutorPreference {
-    AUTO,
-    LOCAL_FIRST,
-    CLOUD_FIRST
-}
-
-enum class ThemeMode {
-    LIGHT,
-    DARK,
-    SYSTEM
-}
+enum class ApiProvider { ANTHROPIC, OPENAI }
+enum class ExecutorPreference { AUTO, LOCAL_FIRST, CLOUD_FIRST }
+enum class ThemeMode { LIGHT, DARK, SYSTEM }
