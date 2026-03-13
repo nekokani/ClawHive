@@ -56,10 +56,6 @@ android {
     }
 }
 
-repositories {
-    maven { url = uri("https://jitpack.io") }
-}
-
 dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
