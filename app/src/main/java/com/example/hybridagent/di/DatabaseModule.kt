@@ -20,8 +20,8 @@ import javax.inject.Singleton
 object DatabaseModule {
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            database.execSQL("""
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""
                 CREATE TABLE IF NOT EXISTS chat_messages (
                     id TEXT PRIMARY KEY NOT NULL,
                     role TEXT NOT NULL,
