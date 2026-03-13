@@ -29,17 +29,25 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        loadChatHistory()
-    }
-
-    private fun loadChatHistory() {
+        // 延迟加载历史记录，避免初始化时崩溃
         viewModelScope.launch {
             try {
-                val messages = chatMessageDao.getAllMessagesList().map { it.toChatMessage() }
-                _uiState.update { it.copy(messages = messages) }
+                loadChatHistory()
             } catch (e: Exception) {
-                Log.e("ClawHive", "Failed to load chat history", e)
+                Log.e("ClawHive", "Failed to load chat history in init", e)
             }
+        }
+    }
+
+    private suspend fun loadChatHistory() {
+        try {
+            val messages = chatMessageDao.getAllMessagesList().map { it.toChatMessage() }
+            _uiState.update { it.copy(messages = messages) }
+            Log.d("ClawHive", "Loaded ${messages.size} messages from database")
+        } catch (e: Exception) {
+            Log.e("ClawHive", "Failed to load chat history", e)
+            // 不抛出异常，使用空列表
+            _uiState.update { it.copy(messages = emptyList()) }
         }
     }
 
@@ -51,12 +59,14 @@ class HomeViewModel @Inject constructor(
 
         _uiState.update { it.copy(messages = updatedMessages, isLoading = true, error = null) }
 
-        // 保存用户消息到数据库
+        // 异步保存用户消息到数据库
         viewModelScope.launch {
             try {
                 chatMessageDao.insertMessage(userMessage.toEntity())
+                Log.d("ClawHive", "Saved user message to database")
             } catch (e: Exception) {
                 Log.e("ClawHive", "Failed to save user message", e)
+                // 不影响发送流程
             }
         }
 
@@ -69,34 +79,47 @@ class HomeViewModel @Inject constructor(
                 val openaiBaseUrl = settingsDataStore.openaiBaseUrl.first()
                 val openaiModel = settingsDataStore.openaiModel.first()
 
-                Log.d("ClawHive", "Anthropic key: ${anthropicKey.take(10)}..., OpenAI key: ${openaiKey.take(10)}...")
+                Log.d("ClawHive", "Anthropic key exists: ${anthropicKey.isNotBlank()}, OpenAI key exists: ${openaiKey.isNotBlank()}")
 
                 val result = when {
-                    anthropicKey.isNotBlank() -> llmRepository.chatWithClaude(
-                        apiKey = anthropicKey,
-                        messages = updatedMessages,
-                        baseUrl = anthropicBaseUrl,
-                        model = anthropicModel
-                    )
-                    openaiKey.isNotBlank() -> llmRepository.chatWithOpenAi(
-                        apiKey = openaiKey,
-                        messages = updatedMessages,
-                        baseUrl = openaiBaseUrl,
-                        model = openaiModel
-                    )
-                    else -> Result.failure(Exception("请先在设置中填写 API Key（Anthropic 或 OpenAI）"))
+                    anthropicKey.isNotBlank() -> {
+                        Log.d("ClawHive", "Using Anthropic API")
+                        llmRepository.chatWithClaude(
+                            apiKey = anthropicKey,
+                            messages = updatedMessages,
+                            baseUrl = anthropicBaseUrl,
+                            model = anthropicModel
+                        )
+                    }
+                    openaiKey.isNotBlank() -> {
+                        Log.d("ClawHive", "Using OpenAI API")
+                        llmRepository.chatWithOpenAi(
+                            apiKey = openaiKey,
+                            messages = updatedMessages,
+                            baseUrl = openaiBaseUrl,
+                            model = openaiModel
+                        )
+                    }
+                    else -> {
+                        Log.w("ClawHive", "No API key configured")
+                        Result.failure(Exception("请先在设置中填写 API Key（Anthropic 或 OpenAI）"))
+                    }
                 }
 
                 result.onSuccess { reply ->
+                    Log.d("ClawHive", "Received reply: ${reply.take(50)}...")
                     val assistantMessage = ChatMessage(role = "assistant", content = reply)
                     _uiState.update {
                         it.copy(messages = it.messages + assistantMessage, isLoading = false)
                     }
-                    // 保存 AI 回复到数据库
-                    try {
-                        chatMessageDao.insertMessage(assistantMessage.toEntity())
-                    } catch (e: Exception) {
-                        Log.e("ClawHive", "Failed to save assistant message", e)
+                    // 异步保存 AI 回复到数据库
+                    viewModelScope.launch {
+                        try {
+                            chatMessageDao.insertMessage(assistantMessage.toEntity())
+                            Log.d("ClawHive", "Saved assistant message to database")
+                        } catch (e: Exception) {
+                            Log.e("ClawHive", "Failed to save assistant message", e)
+                        }
                     }
                 }.onFailure { error ->
                     Log.e("ClawHive", "Chat error", error)
@@ -118,6 +141,7 @@ class HomeViewModel @Inject constructor(
             try {
                 chatMessageDao.clearAll()
                 _uiState.update { it.copy(messages = emptyList(), error = null) }
+                Log.d("ClawHive", "Cleared all messages")
             } catch (e: Exception) {
                 Log.e("ClawHive", "Failed to clear messages", e)
                 _uiState.update { it.copy(error = "清空失败: ${e.message}") }
