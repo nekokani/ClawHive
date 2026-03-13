@@ -53,5 +53,30 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveCostBudget(budget: Double) = context.dataStore.edit { it[COST_BUDGET] = budget }
     suspend fun saveThemeMode(theme: String) = context.dataStore.edit { it[THEME_MODE] = theme }
 
+    // 批量保存所有设置，避免多次 edit 导致的并发问题
+    suspend fun saveAllSettings(
+        anthropicKey: String,
+        anthropicBaseUrl: String,
+        anthropicModel: String,
+        openaiKey: String,
+        openaiBaseUrl: String,
+        openaiModel: String,
+        executorPref: String,
+        costBudget: Double,
+        themeMode: String
+    ) {
+        context.dataStore.edit { prefs ->
+            prefs[ANTHROPIC_API_KEY] = anthropicKey
+            prefs[ANTHROPIC_BASE_URL] = anthropicBaseUrl
+            prefs[ANTHROPIC_MODEL] = anthropicModel
+            prefs[OPENAI_API_KEY] = openaiKey
+            prefs[OPENAI_BASE_URL] = openaiBaseUrl
+            prefs[OPENAI_MODEL] = openaiModel
+            prefs[EXECUTOR_PREFERENCE] = executorPref
+            prefs[COST_BUDGET] = costBudget
+            prefs[THEME_MODE] = themeMode
+        }
+    }
+
     suspend fun clearAll() = context.dataStore.edit { it.clear() }
 }

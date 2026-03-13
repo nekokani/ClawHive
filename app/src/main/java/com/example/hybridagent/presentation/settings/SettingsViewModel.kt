@@ -166,16 +166,29 @@ class SettingsViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isSaving = true, saveError = null) }
                 val s = _uiState.value
-                settingsDataStore.saveAnthropicApiKey(s.anthropicApiKey)
-                settingsDataStore.saveAnthropicBaseUrl(s.anthropicBaseUrl)
-                settingsDataStore.saveAnthropicModel(s.anthropicModel)
-                settingsDataStore.saveOpenaiApiKey(s.openaiApiKey)
-                settingsDataStore.saveOpenaiBaseUrl(s.openaiBaseUrl)
-                settingsDataStore.saveOpenaiModel(s.openaiModel)
-                settingsDataStore.saveExecutorPreference(s.executorPreference.name)
-                settingsDataStore.saveCostBudget(s.costBudget)
-                settingsDataStore.saveThemeMode(s.themeMode.name)
+
+                Log.d("ClawHive", "Saving settings...")
+                Log.d("ClawHive", "  Anthropic Base URL: ${s.anthropicBaseUrl}")
+                Log.d("ClawHive", "  Anthropic Model: ${s.anthropicModel}")
+                Log.d("ClawHive", "  OpenAI Base URL: ${s.openaiBaseUrl}")
+                Log.d("ClawHive", "  OpenAI Model: ${s.openaiModel}")
+
+                // 使用批量保存方法，避免多次 edit 导致的并发问题
+                settingsDataStore.saveAllSettings(
+                    anthropicKey = s.anthropicApiKey,
+                    anthropicBaseUrl = s.anthropicBaseUrl,
+                    anthropicModel = s.anthropicModel,
+                    openaiKey = s.openaiApiKey,
+                    openaiBaseUrl = s.openaiBaseUrl,
+                    openaiModel = s.openaiModel,
+                    executorPref = s.executorPreference.name,
+                    costBudget = s.costBudget,
+                    themeMode = s.themeMode.name
+                )
+
+                Log.d("ClawHive", "Settings saved successfully")
                 _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, saveSuccess = true) }
+
                 kotlinx.coroutines.delay(2000)
                 _uiState.update { it.copy(saveSuccess = false) }
             } catch (e: Exception) {
