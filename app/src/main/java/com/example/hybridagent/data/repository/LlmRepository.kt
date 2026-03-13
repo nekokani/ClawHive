@@ -53,17 +53,25 @@ class LlmRepository @Inject constructor(
         model: String = "claude-haiku-4-5-20251001"
     ): Result<String> {
         return try {
-            Log.d("ClawHive", "Calling Claude API: $baseUrl, model: $model")
+            Log.d("ClawHive", "Calling Claude API")
+            Log.d("ClawHive", "  Base URL: $baseUrl")
+            Log.d("ClawHive", "  Model: $model")
+            Log.d("ClawHive", "  API Key length: ${apiKey.length}")
+            Log.d("ClawHive", "  Messages count: ${messages.size}")
+
             val service = buildClaudeService(baseUrl)
             val response = service.chat(
                 apiKey = apiKey,
-                version = "2023-06-01",
+                version = "2023-06-01",  // Anthropic API version
                 request = AnthropicRequest(
                     model = model,
                     max_tokens = 4096,
                     messages = messages
                 )
             )
+
+            Log.d("ClawHive", "Response code: ${response.code()}")
+
             if (response.isSuccessful) {
                 val text = response.body()?.content
                     ?.firstOrNull { it.type == "text" }?.text
@@ -73,7 +81,17 @@ class LlmRepository @Inject constructor(
             } else {
                 val errBody = response.errorBody()?.string() ?: ""
                 Log.e("ClawHive", "Claude API error ${response.code()}: $errBody")
-                Result.failure(Exception("Claude API 错误 ${response.code()}: $errBody"))
+
+                // 提供更详细的错误信息
+                val errorMessage = when (response.code()) {
+                    401 -> "API Key 无效或未授权"
+                    403 -> "访问被拒绝。请检查：\n1. API Key 是否正确\n2. API Key 是否有权限访问此模型\n3. Base URL 是否正确"
+                    404 -> "API 端点不存在，请检查 Base URL"
+                    429 -> "请求过于频繁，请稍后重试"
+                    else -> "API 错误 ${response.code()}"
+                }
+
+                Result.failure(Exception("$errorMessage\n详细信息: $errBody"))
             }
         } catch (e: Exception) {
             Log.e("ClawHive", "Claude request failed", e)
