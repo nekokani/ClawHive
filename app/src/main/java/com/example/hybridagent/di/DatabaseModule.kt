@@ -2,7 +2,10 @@ package com.example.hybridagent.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.hybridagent.data.local.AppDatabase
+import com.example.hybridagent.data.local.ChatMessageDao
 import com.example.hybridagent.data.local.SettingsDataStore
 import com.example.hybridagent.data.local.TaskDao
 import dagger.Module
@@ -16,6 +19,19 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS chat_messages (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL
+                )
+            """.trimIndent())
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -25,13 +41,22 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "hybrid_agent_db"
-        ).build()
+        )
+        .addMigrations(MIGRATION_1_2)
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
     @Singleton
     fun provideTaskDao(database: AppDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatMessageDao(database: AppDatabase): ChatMessageDao {
+        return database.chatMessageDao()
     }
 
     @Provides

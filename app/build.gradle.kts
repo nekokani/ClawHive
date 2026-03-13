@@ -56,6 +56,10 @@ android {
     }
 }
 
+repositories {
+    maven { url = uri("https://jitpack.io") }
+}
+
 dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
@@ -103,6 +107,9 @@ dependencies {
 
     // Gson
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Markdown rendering for Compose
+    implementation("com.github.jeziellago:compose-markdown:0.3.6")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

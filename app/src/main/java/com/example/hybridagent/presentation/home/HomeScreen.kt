@@ -1,6 +1,12 @@
 package com.example.hybridagent.presentation.home
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,9 +21,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.hybridagent.data.model.ChatMessage
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +41,7 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     // 有新消息时滚动到底部
     LaunchedEffect(uiState.messages.size) {
@@ -86,7 +96,7 @@ fun HomeScreen(
             )
         }
     ) { padding ->
-        if (uiState.messages.isEmpty()) {
+        if (uiState.messages.isEmpty() && !uiState.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -124,20 +134,11 @@ fun HomeScreen(
                 contentPadding = PaddingValues(vertical = 12.dp)
             ) {
                 items(uiState.messages) { message ->
-                    MessageBubble(message)
+                    MessageBubble(message, context)
                 }
                 if (uiState.isLoading) {
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(24.dp)
-                            )
-                        }
+                        ThinkingIndicator()
                     }
                 }
             }
@@ -145,8 +146,9 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MessageBubble(message: ChatMessage) {
+fun MessageBubble(message: ChatMessage, context: Context) {
     val isUser = message.role == "user"
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -167,18 +169,84 @@ fun MessageBubble(message: ChatMessage) {
                         bottomEnd = if (isUser) 4.dp else 16.dp
                     )
                 )
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("message", message.content)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast
+                            .makeText(context, "已复制到剪贴板", android.widget.Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                )
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Text(
-                text = message.content,
-                color = if (isUser)
-                    MaterialTheme.colorScheme.onPrimary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            if (isUser) {
+                Text(
+                    text = message.content,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                MarkdownText(
+                    markdown = message.content,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
+}
+
+@Composable
+fun ThinkingIndicator() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+                )
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(3) { index ->
+                    ThinkingDot(index)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ThinkingDot(index: Int) {
+    val infiniteTransition = rememberInfiniteTransition(label = "thinking")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = index * 200),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(8.dp)
+            .alpha(alpha)
+            .background(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                shape = RoundedCornerShape(50)
+            )
+    )
 }
 
 @Composable
